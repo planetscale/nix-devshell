@@ -17,6 +17,7 @@
             config.nix-devshell.go.package
             pkgs.gopls
             pkgs.golangci-lint
+            pkgs.gotestsum
           ];
         };
       };
