@@ -1,53 +1,44 @@
 {
   inputs = {
     nixpkgs.url = "github:nixos/nixpkgs/nixos-unstable";
-    flake-utils.url = "github:numtide/flake-utils";
+    flake-parts.url = "github:hercules-ci/flake-parts";
+    mattware = {
+      url = "github:mattrobenolt/nixpkgs";
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
   };
 
   outputs =
-    {
-      self,
-      nixpkgs,
-      flake-utils,
-      ...
-    }:
-    flake-utils.lib.eachDefaultSystem (
-      system:
-      let
-        pkgs = import nixpkgs { inherit system; };
-      in
-      {
-        devShells.dev = pkgs.mkShell {
-          packages = with pkgs; [
-            statix
-            deadnix
-            nixfmt-rfc-style
-          ];
+    inputs@{ flake-parts, ... }:
+    flake-parts.lib.mkFlake { inherit inputs; } {
+      flake.flakeModules =
+        let
+          importApply = flake-parts.lib.importApply;
+          withMattware = { inherit (inputs) mattware; };
+        in
+        {
+          base = ./modules/base.nix;
+          go = importApply ./modules/go.nix withMattware;
+          zig = importApply ./modules/zig.nix withMattware;
+          queryPath = importApply ./modules/teams/query-path.nix {
+            baseModule = ./modules/base.nix;
+          };
         };
 
-        devShells.default = pkgs.mkShell {
-          packages = with pkgs; [
-            awscli2
-            bash
-            fd
-            git
-            gnumake
-            google-cloud-sdk
-            jq
-            ripgrep
-          ];
+      imports = [ ./modules/base.nix ];
 
-          shellHook = ''
-            export PATH=$HOME/.ps-toolbox/bin:$PATH
-          '';
-        };
+      perSystem =
+        { pkgs, config, ... }:
+        {
+          devShells.dev = pkgs.mkShell {
+            packages = with pkgs; [
+              statix
+              deadnix
+              nixfmt
+            ];
+          };
 
-        devShells.queryPath = pkgs.mkShell {
-          inputsFrom = [ self.devShells.${system}.default ];
-          packages = with pkgs; [
-            just
-          ];
+          devShells.default = config.devShells.base;
         };
-      }
-    );
+    };
 }
