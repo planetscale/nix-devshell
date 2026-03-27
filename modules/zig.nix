@@ -1,7 +1,13 @@
 { mattware }:
-{ lib, ... }: {
+{ lib, ... }:
+{
   perSystem =
-    { system, pkgs, config, ... }:
+    {
+      system,
+      pkgs,
+      config,
+      ...
+    }:
     {
       options = {
         nix-devshell.zig.package = lib.mkOption {
