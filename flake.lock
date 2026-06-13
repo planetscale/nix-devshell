@@ -26,11 +26,11 @@
         "treefmt-nix": "treefmt-nix"
       },
       "locked": {
-        "lastModified": 1781152547,
-        "narHash": "sha256-HH98huK0qGWqTq3g3bDzq/XaoZcAS8sOTXIR4dc70DY=",
+        "lastModified": 1781325277,
+        "narHash": "sha256-AbIg+sxEH5F87UqvNloSGjZ8KJSHxUNVJV6E/s7baYc=",
         "owner": "mattrobenolt",
         "repo": "nixpkgs",
-        "rev": "d7a604bdcc420aef3c8c6ac9361f51fa9068d856",
+        "rev": "773b269f7d01ac296ad93477d8104b74daf37c08",
         "type": "github"
       },
       "original": {
