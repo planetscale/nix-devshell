@@ -5,11 +5,11 @@
         "nixpkgs-lib": "nixpkgs-lib"
       },
       "locked": {
-        "lastModified": 1785627969,
-        "narHash": "sha256-4dtXQk/NMePegK/nWp5NSeuZKLATItOq61lpEvmXqGw=",
+        "lastModified": 1787558697,
+        "narHash": "sha256-bkDIfils0LbHohYvfVHJtEP5SZ9C0DwDrtaib7mIzvE=",
         "owner": "hercules-ci",
         "repo": "flake-parts",
-        "rev": "427bf4bd9435fdf21321c8cc628c24efc14c0f7a",
+        "rev": "7cf587d4b6b74ea1d1b40be4b056ac9e2516a399",
         "type": "github"
       },
       "original": {
