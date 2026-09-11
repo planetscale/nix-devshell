@@ -12,8 +12,8 @@
       options = {
         nix-devshell.go.package = lib.mkOption {
           type = lib.types.package;
-          default = mattware.packages.${system}.go-bin_1_26;
-          defaultText = lib.literalExpression "mattware.packages.\${system}.go-bin_1_26";
+          default = mattware.packages.${system}.go-bin_1_27;
+          defaultText = lib.literalExpression "mattware.packages.\${system}.go-bin_1_27";
         };
       };
 

@@ -40,7 +40,7 @@ A module that needs nix-devshell inputs (like `mattware`) takes them as the firs
     options = {
       nix-devshell.go.package = lib.mkOption {
         type = lib.types.package;
-        default = mattware.packages.${system}.go-bin_1_26;
+        default = mattware.packages.${system}.go-bin_1_27;
       };
     };
     config = {
@@ -74,7 +74,7 @@ A module that only uses nixpkgs (no nix-devshell inputs needed) skips the first 
 
 ## Package Sources
 
-- **Go packages** (`go-bin_1_26`, `go-bin_1_24`, etc.) — come from `mattware` (`github:mattrobenolt/nixpkgs`), not upstream nixpkgs. Mattware keeps these more up to date.
+- **Go packages** (`go-bin_1_27`, `go-bin_1_24`, etc.) — come from `mattware` (`github:mattrobenolt/nixpkgs`), not upstream nixpkgs. Mattware keeps these more up to date.
 - **Zig** (`zig_0_15`, `zls_0_15`) — come from upstream nixpkgs
 - **Zig tools** (`ziglint`, `zigdoc`) — come from `mattware`
 
