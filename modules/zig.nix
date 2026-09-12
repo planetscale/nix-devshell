@@ -1,31 +1,25 @@
-{ mattware }:
-{ lib, ... }:
+{ mattware, version }:
 {
   perSystem =
     {
       system,
       pkgs,
-      config,
       ...
     }:
+    let
+      # "0.16" -> "0_16", the nixpkgs attribute suffix
+      v = builtins.replaceStrings [ "." ] [ "_" ] version;
+    in
     {
-      options = {
-        nix-devshell.zig.package = lib.mkOption {
-          type = lib.types.package;
-          default = pkgs.zig_0_15;
-          defaultText = lib.literalExpression "pkgs.zig_0_15";
-        };
-      };
-
-      config = {
-        devShells.zig = pkgs.mkShell {
-          packages = [
-            config.nix-devshell.zig.package
-            pkgs.zls_0_15
-            mattware.packages.${system}.ziglint
-            mattware.packages.${system}.zigdoc
-          ];
-        };
+      # The imported version *is* `devShells.zig`; import exactly one.
+      # Two versions conflict on this attrpath, which is the desired loud failure.
+      devShells.zig = pkgs.mkShell {
+        packages = [
+          pkgs."zig_${v}"
+          pkgs."zls_${v}"
+          mattware.packages.${system}.ziglint
+          mattware.packages.${system}.zigdoc
+        ];
       };
     };
 }

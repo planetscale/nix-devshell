@@ -9,7 +9,8 @@ flake.nix                        # exports flakeModules, owns the dev shell for 
 modules/
   base.nix                       # company-wide tools, sets systems via lib.mkDefault
   go.nix                         # Go toolchain, overridable via nix-devshell.go.package
-  zig.nix                        # Zig toolchain, overridable via nix-devshell.zig.package
+  zig.nix                        # Zig toolchain, parameterized by version (mattware + version args)
+                                 # exported as a version namespace: flakeModules.zig."0.16"
   teams/
     query-path.nix               # queryPath team module (imports base + adds just)
 ```
@@ -29,6 +30,15 @@ go = importApply ./modules/go.nix { inherit (inputs) mattware; };
 ```
 
 `importApply` bakes in the provider-side values at export time. Without it, `inputs.mattware` inside a module would refer to the *consumer's* inputs, where mattware doesn't exist.
+
+**Version namespace** — for toolchain modules that consumers pick a version of at import time:
+```nix
+zig = {
+  "0.15" = zig "0.15";
+  "0.16" = zig "0.16";
+};
+```
+Consumers import `zig."0.16"` (exactly one — two versions conflict on `devShells.zig`). The module maps the version string onto the nixpkgs attrs (`zig_0_16`, `zls_0_16`) and provides `devShells.zig` at that version. Add a version by adding an entry to the namespace in `flake.nix`.
 
 ## Module Structure
 
@@ -75,7 +85,7 @@ A module that only uses nixpkgs (no nix-devshell inputs needed) skips the first 
 ## Package Sources
 
 - **Go packages** (`go-bin_1_27`, `go-bin_1_24`, etc.) — come from `mattware` (`github:mattrobenolt/nixpkgs`), not upstream nixpkgs. Mattware keeps these more up to date.
-- **Zig** (`zig_0_15`, `zls_0_15`) — come from upstream nixpkgs
+- **Zig** (`zig_0_15`/`zls_0_15`, `zig_0_16`/`zls_0_16`) — come from upstream nixpkgs; the zig module pairs each version with its matching zls. Add a version by adding an entry to the `zig` namespace in `flake.nix`.
 - **Zig tools** (`ziglint`, `zigdoc`) — come from `mattware`
 
 ## Key Rules

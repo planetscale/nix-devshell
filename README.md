@@ -27,7 +27,7 @@ nix flake init -t github:planetscale/nix-devshell#go
       imports = with inputs.planetscale.flakeModules; [
         base
         go
-        zig
+        zig."0.16"
       ];
 
       perSystem =
@@ -50,6 +50,10 @@ nix flake init -t github:planetscale/nix-devshell#go
 
 - `base` — company-wide tools (awscli2, gcloud, jq, ripgrep, …) and ps-toolbox PATH
 - `go` — Go toolchain. Overridable via `nix-devshell.go.package`.
-- `zig` — Zig toolchain. Overridable via `nix-devshell.zig.package`.
+- `zig` — Zig toolchain, a version namespace. Import the version you want (exactly one):
+  ```nix
+  imports = [ inputs.planetscale.flakeModules.zig."0.16" ];
+  ```
+  The imported version provides `devShells.zig` (zig, matching zls, ziglint, zigdoc).
 - `nix` — Nix linting and formatting (nixfmt, statix, deadnix)
 - `queryPath` — Query Path team module

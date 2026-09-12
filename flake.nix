@@ -14,6 +14,11 @@
 
   outputs =
     inputs@{ flake-parts, treefmt-nix, ... }:
+    let
+      inherit (flake-parts.lib) importApply;
+      withMattware = { inherit (inputs) mattware; };
+      zig = version: importApply ./modules/zig.nix (withMattware // { inherit version; });
+    in
     flake-parts.lib.mkFlake { inherit inputs; } {
       flake.templates = {
         go = {
@@ -22,24 +27,24 @@
         };
       };
 
-      flake.flakeModules =
-        let
-          inherit (flake-parts.lib) importApply;
-          withMattware = { inherit (inputs) mattware; };
-        in
-        {
-          base = ./modules/base.nix;
-          go = importApply ./modules/go.nix withMattware;
-          nix = ./modules/nix.nix;
-          zig = importApply ./modules/zig.nix withMattware;
-          queryPath = importApply ./modules/teams/query-path.nix {
-            baseModule = ./modules/base.nix;
-          };
+      flake.flakeModules = {
+        base = ./modules/base.nix;
+        go = importApply ./modules/go.nix withMattware;
+        nix = ./modules/nix.nix;
+        # Version namespace: consumers import zig."0.16" (exactly one).
+        zig = {
+          "0.15" = zig "0.15";
+          "0.16" = zig "0.16";
         };
+        queryPath = importApply ./modules/teams/query-path.nix {
+          baseModule = ./modules/base.nix;
+        };
+      };
 
       imports = [
         ./modules/base.nix
         ./modules/nix.nix
+        (zig "0.16")
         treefmt-nix.flakeModule
       ];
 
