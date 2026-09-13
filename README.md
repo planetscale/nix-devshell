@@ -26,7 +26,7 @@ nix flake init -t github:planetscale/nix-devshell#go
     flake-parts.lib.mkFlake { inherit inputs; } {
       imports = with inputs.planetscale.flakeModules; [
         base
-        go
+        go."1.27"
         zig."0.16"
       ];
 
@@ -49,7 +49,12 @@ nix flake init -t github:planetscale/nix-devshell#go
 ## Modules
 
 - `base` — company-wide tools (awscli2, gcloud, jq, ripgrep, …) and ps-toolbox PATH
-- `go` — Go toolchain. Overridable via `nix-devshell.go.package`.
+- `go` — Go toolchain, a version namespace. Import the version you want (exactly one):
+  ```nix
+  imports = [ inputs.planetscale.flakeModules.go."1.27" ];
+  ```
+  The imported version provides `devShells.go` (go, gopls, golangci-lint, gotestsum).
+  `nix-devshell.go.package` exposes the selected go-bin; consumer definitions still override it.
 - `zig` — Zig toolchain, a version namespace. Import the version you want (exactly one):
   ```nix
   imports = [ inputs.planetscale.flakeModules.zig."0.16" ];

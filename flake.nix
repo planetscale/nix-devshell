@@ -18,6 +18,7 @@
       inherit (flake-parts.lib) importApply;
       withMattware = { inherit (inputs) mattware; };
       zig = version: importApply ./modules/zig.nix (withMattware // { inherit version; });
+      go = version: importApply ./modules/go.nix (withMattware // { inherit version; });
     in
     flake-parts.lib.mkFlake { inherit inputs; } {
       flake.templates = {
@@ -29,9 +30,14 @@
 
       flake.flakeModules = {
         base = ./modules/base.nix;
-        go = importApply ./modules/go.nix withMattware;
         nix = ./modules/nix.nix;
-        # Version namespace: consumers import zig."0.16" (exactly one).
+        # Version namespaces: consumers import go."1.27" / zig."0.16" (exactly one).
+        go = {
+          "1.24" = go "1.24";
+          "1.25" = go "1.25";
+          "1.26" = go "1.26";
+          "1.27" = go "1.27";
+        };
         zig = {
           "0.15" = zig "0.15";
           "0.16" = zig "0.16";
@@ -44,6 +50,7 @@
       imports = [
         ./modules/base.nix
         ./modules/nix.nix
+        (go "1.27")
         (zig "0.16")
         treefmt-nix.flakeModule
       ];

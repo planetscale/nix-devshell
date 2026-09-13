@@ -8,7 +8,9 @@ This repo (`planetscale/nix-devshell`) exports shared flake-parts modules consum
 flake.nix                        # exports flakeModules, owns the dev shell for this repo
 modules/
   base.nix                       # company-wide tools, sets systems via lib.mkDefault
-  go.nix                         # Go toolchain, overridable via nix-devshell.go.package
+  go.nix                         # Go toolchain, parameterized by version (mattware + version args)
+                                 # exported as a version namespace: flakeModules.go."1.27"
+                                 # nix-devshell.go.package defaults to the selected go-bin
   zig.nix                        # Zig toolchain, parameterized by version (mattware + version args)
                                  # exported as a version namespace: flakeModules.zig."0.16"
   teams/
@@ -31,14 +33,18 @@ go = importApply ./modules/go.nix { inherit (inputs) mattware; };
 
 `importApply` bakes in the provider-side values at export time. Without it, `inputs.mattware` inside a module would refer to the *consumer's* inputs, where mattware doesn't exist.
 
-**Version namespace** — for toolchain modules that consumers pick a version of at import time:
+**Version namespace** — for toolchain modules that consumers pick a version of at import time (`go`, `zig`):
 ```nix
+go = {
+  "1.24" = go "1.24";
+  "1.27" = go "1.27";
+};
 zig = {
   "0.15" = zig "0.15";
   "0.16" = zig "0.16";
 };
 ```
-Consumers import `zig."0.16"` (exactly one — two versions conflict on `devShells.zig`). The module maps the version string onto the nixpkgs attrs (`zig_0_16`, `zls_0_16`) and provides `devShells.zig` at that version. Add a version by adding an entry to the namespace in `flake.nix`.
+Consumers import `go."1.27"` / `zig."0.16"` (exactly one — two versions conflict on the `devShells.<name>` attrpath). The zig module maps the version onto nixpkgs attrs (`zig_0_16`, `zls_0_16`); the go module maps it onto mattware attrs (`go-bin_1_27`) and defaults `nix-devshell.go.package` to it. Add a version by adding an entry to the namespace in `flake.nix`.
 
 ## Module Structure
 
@@ -84,7 +90,7 @@ A module that only uses nixpkgs (no nix-devshell inputs needed) skips the first 
 
 ## Package Sources
 
-- **Go packages** (`go-bin_1_27`, `go-bin_1_24`, etc.) — come from `mattware` (`github:mattrobenolt/nixpkgs`), not upstream nixpkgs. Mattware keeps these more up to date.
+- **Go packages** (`go-bin_1_27`, `go-bin_1_24`, etc.) — come from `mattware` (`github:mattrobenolt/nixpkgs`), not upstream nixpkgs. Mattware keeps these more up to date. The `go` namespace maps version strings to these attrs.
 - **Zig** (`zig_0_15`/`zls_0_15`, `zig_0_16`/`zls_0_16`) — come from upstream nixpkgs; the zig module pairs each version with its matching zls. Add a version by adding an entry to the `zig` namespace in `flake.nix`.
 - **Zig tools** (`ziglint`, `zigdoc`) — come from `mattware`
 

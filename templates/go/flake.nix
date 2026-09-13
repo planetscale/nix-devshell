@@ -12,10 +12,11 @@
     inputs@{ flake-parts, ... }:
     flake-parts.lib.mkFlake { inherit inputs; } {
       # Add modules here.
-      # imports and inputsFrom below should mirror each other.
+      # imports and inputsFrom below should mirror each other,
+      # except toolchain versions: pick those once, in the import.
       imports = with inputs.planetscale.flakeModules; [
         base
-        go
+        go."1.27"
       ];
 
       perSystem =
