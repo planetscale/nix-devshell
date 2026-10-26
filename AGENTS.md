@@ -10,6 +10,8 @@ modules/
   base.nix                       # company-wide tools, sets systems via lib.mkDefault
   go.nix                         # Go toolchain, parameterized by version (mattware + version args)
                                  # exported as a version namespace: flakeModules.go."1.27"
+                                 # version = null resolves the toolchain from the consumer's
+                                 # go.mod instead; exported as flakeModules.go.fromGoMod
                                  # nix-devshell.go.package defaults to the selected go-bin
   zig.nix                        # Zig toolchain, parameterized by version (mattware + version args)
                                  # exported as a version namespace: flakeModules.zig."0.16"
@@ -38,6 +40,7 @@ go = importApply ./modules/go.nix { inherit (inputs) mattware; };
 go = {
   "1.24" = go "1.24";
   "1.27" = go "1.27";
+  fromGoMod = importApply ./modules/go.nix (withMattware // { version = null; });
 };
 zig = {
   "0.15" = zig "0.15";
@@ -45,6 +48,8 @@ zig = {
 };
 ```
 Consumers import `go."1.27"` / `zig."0.16"` (exactly one — two versions conflict on the `devShells.<name>` attrpath). The zig module maps the version onto nixpkgs attrs (`zig_0_16`, `zls_0_16`); the go module maps it onto mattware attrs (`go-bin_1_27`) and defaults `nix-devshell.go.package` to it. Add a version by adding an entry to the namespace in `flake.nix`.
+
+The go namespace also has `fromGoMod`, which is not a version: it passes `version = null`, and the module calls mattware's `go-bin.fromGoMod` on the consumer's `go.mod` (`self.outPath + "/go.mod"`, overridable with `nix-devshell.go.goMod`). `go.fromGoMod` conflicts with a version entry on `devShells.go`, so importing both fails loudly. The pinned overlay only tracks the last four minor versions, so a `go.mod` naming anything older fails evaluation and names the version.
 
 ## Module Structure
 

@@ -16,7 +16,8 @@
       # except toolchain versions: pick those once, in the import.
       imports = with inputs.planetscale.flakeModules; [
         base
-        go."1.27"
+        # Follows ./go.mod. Swap for go."1.27" to pin the toolchain here instead.
+        go.fromGoMod
       ];
 
       perSystem =

@@ -32,11 +32,14 @@
         base = ./modules/base.nix;
         nix = ./modules/nix.nix;
         # Version namespaces: consumers import go."1.27" / zig."0.16" (exactly one).
+        # fromGoMod is a go namespace entry too: it resolves the toolchain from
+        # the consumer's go.mod instead of pinning a version here.
         go = {
           "1.24" = go "1.24";
           "1.25" = go "1.25";
           "1.26" = go "1.26";
           "1.27" = go "1.27";
+          fromGoMod = importApply ./modules/go.nix (withMattware // { version = null; });
         };
         zig = {
           "0.15" = zig "0.15";

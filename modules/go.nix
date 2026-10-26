@@ -1,5 +1,8 @@
-{ mattware, version }:
-{ lib, ... }:
+{
+  mattware,
+  version ? null,
+}:
+{ lib, self, ... }:
 {
   perSystem =
     {
@@ -9,18 +12,43 @@
       ...
     }:
     let
+      # A null version means: resolve the toolchain from the consumer's go.mod.
+      fromGoMod = version == null;
+
       # "1.27" -> "1_27", the mattware attribute suffix
       v = builtins.replaceStrings [ "." ] [ "_" ] version;
+
+      package =
+        if fromGoMod then
+          mattware.packages.${system}.go-bin.fromGoMod config.nix-devshell.go.goMod
+        else
+          mattware.packages.${system}."go-bin_${v}";
     in
     {
-      options = {
+      options.nix-devshell.go = {
         # The imported version's go-bin. Kept as an option so consumers can
         # read the selection (exosphere derives .go-version from it); consumer
         # definitions still override the module default.
-        nix-devshell.go.package = lib.mkOption {
+        package = lib.mkOption {
           type = lib.types.package;
-          default = mattware.packages.${system}."go-bin_${v}";
-          defaultText = lib.literalExpression "mattware.packages.\${system}.go-bin_${v}";
+          default = package;
+          defaultText = lib.literalExpression (
+            if fromGoMod then
+              "mattware.packages.\${system}.go-bin.fromGoMod ./go.mod"
+            else
+              "mattware.packages.\${system}.go-bin_${v}"
+          );
+        };
+      }
+      // lib.optionalAttrs fromGoMod {
+        goMod = lib.mkOption {
+          type = lib.types.path;
+          default = self.outPath + "/go.mod";
+          description = ''
+            go.mod or go.work file that selects the toolchain. The `toolchain`
+            directive wins; otherwise the `go` directive states a minimum and
+            the newest tracked patch of that minor is used.
+          '';
         };
       };
 
