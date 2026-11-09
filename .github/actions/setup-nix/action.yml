@@ -38,7 +38,7 @@ outputs:
     value: ${{ steps.cache.outputs.hit }}
   cache-key:
     description: Cache key the store was saved under.
-    value: ${{ steps.cache.outputs.primary-key }}
+    value: ${{ steps.key.outputs.primary }}
 
 runs:
   using: composite
@@ -63,6 +63,13 @@ runs:
       with:
         summarize: false
         github-token: ${{ inputs.github-token }}
+        # Nix's store dedup replaces duplicate files with hardlinks into
+        # /nix/store/.links. The Actions cache saves those as hardlink entries
+        # and tar cannot restore an entry before its target, so the restore
+        # drops the file. One upstream job lost 58707 files that way, flake.nix
+        # among them. Trade the store size for a restore that cannot lose data.
+        extra-conf: |
+          auto-optimise-store = false
 
     - name: Install upstream Nix
       if: ${{ inputs.installer == 'upstream' }}
@@ -71,6 +78,8 @@ runs:
         summarize: false
         determinate: false
         github-token: ${{ inputs.github-token }}
+        extra-conf: |
+          auto-optimise-store = false
 
     # Nix's git fetcher shells out to git, so it honours this rewrite. The
     # daemon's `access-tokens` from the installer covers `github:` inputs and
@@ -85,22 +94,31 @@ runs:
         url."https://${GIT_AUTH_TOKEN}@github.com/".insteadOf
         "https://github.com/"
 
+    - name: Compute cache key
+      id: key
+      if: ${{ inputs.cache == 'true' }}
+      shell: bash
+      env:
+        PRIMARY_KEY: ${{ inputs.primary-key }}
+        # The version segment retires entries saved with store dedup enabled;
+        # those restore hardlinks that tar drops on the floor.
+        PREFIX: ${{ format('nix-v2-{0}-{1}-{2}-', runner.os, runner.arch, inputs.installer) }}
+        LOCK: ${{ hashFiles('**/flake.lock') }}
+      run: |
+        set -euo pipefail
+        primary="${PRIMARY_KEY:-${PREFIX}${LOCK}}"
+        printf 'primary=%s\nprefix=%s\n' "$primary" "$PREFIX" >> "$GITHUB_OUTPUT"
+
     - name: Restore Nix store
       id: cache
       if: ${{ inputs.cache == 'true' }}
       uses: nix-community/cache-nix-action@7df957e333c1e5da7721f60227dbba6d06080569 # v7.0.2
       with:
-        primary-key: >-
-          ${{ inputs.primary-key != '' &&
-          inputs.primary-key ||
-          format('nix-{0}-{1}-{2}-{3}', runner.os, runner.arch, inputs.installer,
-          hashFiles('**/flake.lock')) }}
+        primary-key: ${{ steps.key.outputs.primary }}
         # A cache miss after a flake.lock change still restores the previous
         # store, so only the changed paths download. The entry is then saved
         # under the new primary key.
-        restore-prefixes-first-match: >-
-          ${{ format('nix-{0}-{1}-{2}-', runner.os, runner.arch,
-          inputs.installer) }}
+        restore-prefixes-first-match: ${{ steps.key.outputs.prefix }}
         paths: |
           ~/.cache/nix
           /nix
