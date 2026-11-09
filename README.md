@@ -105,9 +105,8 @@ update both. A job that uses the action needs no other Nix setup.
 
 | Input | Default | Description |
 | --- | --- | --- |
-| `installer` | `determinate` | `determinate` installs Determinate Nix. `upstream` installs plain Nix. |
 | `cache` | `true` | Restore and save the Nix store through the Actions cache. |
-| `primary-key` | derived | Cache key. The default uses the installer, the runner OS and architecture, and the digest of `flake.lock`. |
+| `primary-key` | derived | Cache key. The default uses the runner OS and architecture and the digest of `flake.lock`. |
 | `github-token` | workflow token | Token for `github:` flake inputs. Pass a bot token when the flake reads private sibling repositories, because the workflow token cannot. |
 | `git-auth-token` | empty | Token for a global git `insteadOf` rewrite. This covers `git+https` flake inputs from private repositories. |
 
@@ -123,6 +122,10 @@ update both. A job that uses the action needs no other Nix setup.
 The key contains the `flake.lock` digest. When the lock file changes, the action
 restores the previous store through the key prefix and downloads only the paths
 that changed. The job then saves a new entry under the new key.
+
+The action installs one Nix version for every repository: `install_url` is
+pinned to a release, and it does not follow the latest Nix. Bump that line when
+you mean to move the org.
 
 Measured on Depot runners, restoring one project devShell closure (3.3 GiB over
 149 paths) takes 4 to 9 seconds. A cold download from cache.nixos.org takes 24 to

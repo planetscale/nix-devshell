@@ -3,11 +3,6 @@ description: >-
   Install Nix and restore the devShell closure from the Actions cache.
 
 inputs:
-  installer:
-    description: >-
-      Nix distribution to install: `determinate` (Determinate Nix) or
-      `upstream` (plain Nix).
-    default: determinate
   cache:
     description: >-
       Restore and save the Nix store through the Actions cache. On Depot
@@ -15,8 +10,8 @@ inputs:
     default: 'true'
   primary-key:
     description: >-
-      Cache key base. Empty derives one from the installer, runner OS and
-      architecture, and the digest of flake.lock.
+      Cache key base. Empty derives one from the runner OS and architecture
+      and the digest of flake.lock.
     default: ''
   github-token:
     description: >-
@@ -43,42 +38,19 @@ outputs:
 runs:
   using: composite
   steps:
-    - name: Validate installer
-      shell: bash
-      env:
-        INSTALLER: ${{ inputs.installer }}
-      run: |
-        set -euo pipefail
-        case "$INSTALLER" in
-          determinate | upstream) ;;
-          *)
-            echo "setup-nix: unsupported installer '$INSTALLER', expected determinate or upstream" >&2
-            exit 1
-            ;;
-        esac
-
-    - name: Install Determinate Nix
-      if: ${{ inputs.installer == 'determinate' }}
-      uses: DeterminateSystems/determinate-nix-action@16f94ba7aae399b9f9077c254b6719ec6de7e3e3 # v3.24.2
+    - name: Install Nix
+      uses: cachix/install-nix-action@75c75c31ebece974e48ebc36b4ad125bd97bd97b # 31.11.3
       with:
-        summarize: false
-        github-token: ${{ inputs.github-token }}
+        github_access_token: ${{ inputs.github-token }}
+        # Pinned so every repository runs the same Nix. Bump this line
+        # deliberately; pinact and Renovate do not track it.
+        install_url: https://releases.nixos.org/nix/nix-2.35.4/install
         # Nix's store dedup replaces duplicate files with hardlinks into
-        # /nix/store/.links. The Actions cache saves those as hardlink entries
-        # and tar cannot restore an entry before its target, so the restore
-        # drops the file. One upstream job lost 58707 files that way, flake.nix
+        # /nix/store/.links. The Actions cache saves those as hardlink
+        # entries, and tar cannot restore an entry before its target, so the
+        # restore drops the file. One job lost 58707 files that way, flake.nix
         # among them. Trade the store size for a restore that cannot lose data.
-        extra-conf: |
-          auto-optimise-store = false
-
-    - name: Install upstream Nix
-      if: ${{ inputs.installer == 'upstream' }}
-      uses: DeterminateSystems/nix-installer-action@3138316df39ed29be04236d7ffc686fa525866aa # v23
-      with:
-        summarize: false
-        determinate: false
-        github-token: ${{ inputs.github-token }}
-        extra-conf: |
+        extra_nix_config: |
           auto-optimise-store = false
 
     # Nix's git fetcher shells out to git, so it honours this rewrite. The
@@ -100,9 +72,7 @@ runs:
       shell: bash
       env:
         PRIMARY_KEY: ${{ inputs.primary-key }}
-        # The version segment retires entries saved with store dedup enabled;
-        # those restore hardlinks that tar drops on the floor.
-        PREFIX: ${{ format('nix-v2-{0}-{1}-{2}-', runner.os, runner.arch, inputs.installer) }}
+        PREFIX: ${{ format('nix-v2-{0}-{1}-', runner.os, runner.arch) }}
         LOCK: ${{ hashFiles('**/flake.lock') }}
       run: |
         set -euo pipefail

@@ -14,17 +14,11 @@ concurrency:
 
 jobs:
   setup-nix:
-    name: setup-nix (${{ matrix.installer }})
+    name: setup-nix
     runs-on: ubuntu-latest
     timeout-minutes: 20
     permissions:
       contents: read
-    strategy:
-      fail-fast: false
-      matrix:
-        installer:
-          - determinate
-          - upstream
     steps:
       - name: Check out repository
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -34,8 +28,6 @@ jobs:
       - name: Setup Nix
         id: nix
         uses: $/.github/actions/setup-nix
-        with:
-          installer: ${{ matrix.installer }}
 
       - name: Check the devshell evaluates
         run: nix develop .#dev --command nix --version
