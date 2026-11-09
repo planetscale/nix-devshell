@@ -118,10 +118,16 @@ A module that only uses nixpkgs (no nix-devshell inputs needed) skips the first 
 
 Constraints that must not regress:
 
-- `magic-nix-cache-action` does not work on Depot runners. The store uploads
-  return 405 against the Actions cache API, and with Determinate Nix it
-  subscribes to build events and caches nothing for substitution-only work.
-  Every job stayed cold with it installed. Do not add it back.
+- `magic-nix-cache-action` is no faster than no cache on Depot runners. Measured
+  with all three installers, a warm `nix develop` took 29 to 32 seconds, the
+  same as a cold one. With plain Nix every store upload fails with
+  `405 Method Not Allowed`, once per path. With Determinate Nix the action
+  reports `Subscribing to Determinate Nixd build events` and logs no uploads at
+  all. `cache-nix-action` restores in 4 to 9 seconds and leaves `nix develop`
+  at under a second, so use that instead.
+
+  Untested: whether `permissions: actions: write` changes the 405, and why
+  Determinate Nix logs no uploads. Do not restate either as fact.
 - Every `run:` step in the composite takes its inputs through `env:`, never
   through `${{ }}` interpolation, so zizmor's template-injection audit stays
   quiet.
