@@ -50,8 +50,8 @@
       },
       "original": {
         "owner": "nixos",
+        "ref": "nixos-unstable",
         "repo": "nixpkgs",
-        "rev": "40c7d8751ffb8d9faad086757b83d9ba7669a7b3",
         "type": "github"
       }
     },

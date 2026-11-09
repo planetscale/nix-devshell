@@ -32,12 +32,6 @@ jobs:
       - name: Check the devshell evaluates
         run: nix develop .#dev --command nix --version
 
-      - name: Report dedup state
-        run: |
-          nix show-config | grep -i auto-optimise-store || echo "auto-optimise-store: unset"
-          echo "links dir: $(ls /nix/store/.links 2>/dev/null | wc -l) files"
-          find /nix/store -maxdepth 2 -type f -links +1 2>/dev/null | wc -l
-
       - name: Report cache
         env:
           CACHE_HIT: ${{ steps.nix.outputs.cache-hit }}

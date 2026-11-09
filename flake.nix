@@ -1,12 +1,6 @@
 {
   inputs = {
-    # Pinned to a revision, not nixos-unstable: zizmor 1.32.0 (the next
-    # nixpkgs bump) does not build on either architecture, because aws-lc-sys
-    # asks for a system AWS-LC that the nixpkgs package does not provide. This
-    # is the last revision with zizmor 1.31.1, which builds and is in
-    # cache.nixos.org for x86_64-linux and aarch64-linux. A revision pin also
-    # keeps `nix flake update` from moving it.
-    nixpkgs.url = "github:nixos/nixpkgs/40c7d8751ffb8d9faad086757b83d9ba7669a7b3";
+    nixpkgs.url = "github:nixos/nixpkgs/nixos-unstable";
     flake-parts.url = "github:hercules-ci/flake-parts";
     mattware = {
       url = "github:mattrobenolt/nixpkgs";
