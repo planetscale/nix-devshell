@@ -45,13 +45,6 @@ runs:
         # Pinned so every repository runs the same Nix. Bump this line
         # deliberately; pinact and Renovate do not track it.
         install_url: https://releases.nixos.org/nix/nix-2.35.4/install
-        # Nix's store dedup replaces duplicate files with hardlinks into
-        # /nix/store/.links. The Actions cache saves those as hardlink
-        # entries, and tar cannot restore an entry before its target, so the
-        # restore drops the file. One job lost 58707 files that way, flake.nix
-        # among them. Trade the store size for a restore that cannot lose data.
-        extra_nix_config: |
-          auto-optimise-store = false
 
     # Nix's git fetcher shells out to git, so it honours this rewrite. The
     # daemon's `access-tokens` from the installer covers `github:` inputs and
@@ -72,7 +65,7 @@ runs:
       shell: bash
       env:
         PRIMARY_KEY: ${{ inputs.primary-key }}
-        PREFIX: ${{ format('nix-v2-{0}-{1}-', runner.os, runner.arch) }}
+        PREFIX: ${{ format('nix-v3-{0}-{1}-', runner.os, runner.arch) }}
         LOCK: ${{ hashFiles('**/flake.lock') }}
       run: |
         set -euo pipefail
