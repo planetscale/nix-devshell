@@ -58,18 +58,11 @@ jobs:
         with:
           persist-credentials: false
 
-      # The action, not the devshell: nixpkgs carries zizmor 1.32.0 and that
-      # package does not build on either architecture. Move this into the
-      # devshell once nixpkgs fixes it.
-      - name: zizmor
-        uses: zizmorcore/zizmor-action@45d7276c9ca790aabd705e31ca99c6185c3e76dd # v0.8.1
-        with:
-          advanced-security: false
-          min-confidence: medium
-          version: 1.32.0
-
       - name: Setup Nix
         uses: $/.github/actions/setup-nix
+
+      - name: zizmor
+        run: nix develop .#dev --command zizmor --format=plain --min-confidence=medium .
 
       # --verify resolves every SHA back to its tag, and --min-age holds back
       # releases younger than three days. Both read the GitHub API, so pass a

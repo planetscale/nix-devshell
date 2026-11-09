@@ -1,6 +1,12 @@
 {
   inputs = {
-    nixpkgs.url = "github:nixos/nixpkgs/nixos-unstable";
+    # Pinned to a revision, not nixos-unstable: zizmor 1.32.0 (the next
+    # nixpkgs bump) does not build on either architecture, because aws-lc-sys
+    # asks for a system AWS-LC that the nixpkgs package does not provide. This
+    # is the last revision with zizmor 1.31.1, which builds and is in
+    # cache.nixos.org for x86_64-linux and aarch64-linux. A revision pin also
+    # keeps `nix flake update` from moving it.
+    nixpkgs.url = "github:nixos/nixpkgs/40c7d8751ffb8d9faad086757b83d9ba7669a7b3";
     flake-parts.url = "github:hercules-ci/flake-parts";
     mattware = {
       url = "github:mattrobenolt/nixpkgs";
@@ -73,11 +79,11 @@
             packages = [
               config.treefmt.build.wrapper
               # GitHub Actions auditing for this repo's .github/. Consumers do
-              # not need it, so it stays out of the shared modules.
-              # zizmor is absent on purpose: nixpkgs 1.32.0 fails to build on
-              # both architectures (aws-lc-sys packaging), so CI runs the
-              # upstream action instead. See AGENTS.md.
+              # not need these, so they stay out of the shared modules. zizmor
+              # builds because the nixpkgs input is pinned to the last
+              # revision before 1.32.0.
               pkgs.pinact
+              pkgs.zizmor
             ];
           };
 

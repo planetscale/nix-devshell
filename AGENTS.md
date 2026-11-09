@@ -127,10 +127,12 @@ Constraints that must not regress:
   quiet.
 - All `uses:` in `.github/` stay SHA-pinned with a version comment.
   `.github/workflows/ci.yml` enforces this with `pinact run --check --verify`.
-- `pinact` comes from `devShells.dev`. `zizmor` does not: nixpkgs 1.32.0 fails
-  to build on both architectures (aws-lc-sys packaging), so CI runs
-  `zizmorcore/zizmor-action` instead. Move zizmor into `devShells.dev` once
-  nixpkgs fixes the package.
+- `pinact` and `zizmor` come from `devShells.dev`. zizmor only builds because
+  the `nixpkgs` input is pinned to a revision: 1.32.0 fails to build on both
+  architectures (aws-lc-sys wants a system AWS-LC that nixpkgs does not
+  provide). The pin is a full revision, not `nixos-unstable`, so `nix flake
+  update` leaves it alone. Move the pin forward only after checking that
+  zizmor builds and is in cache.nixos.org for both architectures.
 
 ## Dev Shell for This Repo
 
