@@ -1,0 +1,106 @@
+name: Setup Nix
+description: >-
+  Install Nix and restore the devShell closure from the Actions cache.
+
+inputs:
+  installer:
+    description: >-
+      Nix distribution to install: `determinate` (Determinate Nix) or
+      `upstream` (plain Nix).
+    default: determinate
+  cache:
+    description: >-
+      Restore and save the Nix store through the Actions cache. On Depot
+      runners the Actions cache is Depot Cache.
+    default: 'true'
+  primary-key:
+    description: >-
+      Cache key base. Empty derives one from the installer, runner OS and
+      architecture, and the digest of flake.lock.
+    default: ''
+  github-token:
+    description: >-
+      Token the Nix daemon uses for `github:` flake inputs (access-tokens in
+      nix.conf). The workflow token cannot read private sibling repositories,
+      so pass a bot token when the flake does.
+    default: ${{ github.token }}
+  git-auth-token:
+    description: >-
+      Token written into a global git `insteadOf` rewrite, for `git+https`
+      flake inputs from private repositories. Empty disables the rewrite.
+    default: ''
+
+outputs:
+  cache-hit:
+    description: >-
+      'true' when the Nix store came from any cache entry, including a
+      partial match restored through the prefix.
+    value: ${{ steps.cache.outputs.hit }}
+  cache-key:
+    description: Cache key the store was saved under.
+    value: ${{ steps.cache.outputs.primary-key }}
+
+runs:
+  using: composite
+  steps:
+    - name: Validate installer
+      shell: bash
+      env:
+        INSTALLER: ${{ inputs.installer }}
+      run: |
+        set -euo pipefail
+        case "$INSTALLER" in
+          determinate | upstream) ;;
+          *)
+            echo "setup-nix: unsupported installer '$INSTALLER', expected determinate or upstream" >&2
+            exit 1
+            ;;
+        esac
+
+    - name: Install Determinate Nix
+      if: ${{ inputs.installer == 'determinate' }}
+      uses: DeterminateSystems/determinate-nix-action@16f94ba7aae399b9f9077c254b6719ec6de7e3e3 # v3.24.2
+      with:
+        summarize: false
+        github-token: ${{ inputs.github-token }}
+
+    - name: Install upstream Nix
+      if: ${{ inputs.installer == 'upstream' }}
+      uses: DeterminateSystems/nix-installer-action@3138316df39ed29be04236d7ffc686fa525866aa # v23
+      with:
+        summarize: false
+        determinate: false
+        github-token: ${{ inputs.github-token }}
+
+    # Nix's git fetcher shells out to git, so it honours this rewrite. The
+    # daemon's `access-tokens` from the installer covers `github:` inputs and
+    # does not cover `git+https` inputs.
+    - name: Authenticate git for private flake inputs
+      if: ${{ inputs.git-auth-token != '' }}
+      shell: bash
+      env:
+        GIT_AUTH_TOKEN: ${{ inputs.git-auth-token }}
+      run: >-
+        git config --global
+        url."https://${GIT_AUTH_TOKEN}@github.com/".insteadOf
+        "https://github.com/"
+
+    - name: Restore Nix store
+      id: cache
+      if: ${{ inputs.cache == 'true' }}
+      uses: nix-community/cache-nix-action@7df957e333c1e5da7721f60227dbba6d06080569 # v7.0.2
+      with:
+        primary-key: >-
+          ${{ inputs.primary-key != '' &&
+          inputs.primary-key ||
+          format('nix-{0}-{1}-{2}-{3}', runner.os, runner.arch, inputs.installer,
+          hashFiles('**/flake.lock')) }}
+        # A cache miss after a flake.lock change still restores the previous
+        # store, so only the changed paths download. The entry is then saved
+        # under the new primary key.
+        restore-prefixes-first-match: >-
+          ${{ format('nix-{0}-{1}-{2}-', runner.os, runner.arch,
+          inputs.installer) }}
+        paths: |
+          ~/.cache/nix
+          /nix

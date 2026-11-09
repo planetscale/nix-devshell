@@ -70,7 +70,15 @@
 
           devShells.dev = pkgs.mkShell {
             inputsFrom = [ config.devShells.nix ];
-            packages = [ config.treefmt.build.wrapper ];
+            packages = [
+              config.treefmt.build.wrapper
+              # GitHub Actions auditing for this repo's .github/. Consumers do
+              # not need it, so it stays out of the shared modules.
+              # zizmor is absent on purpose: nixpkgs 1.32.0 fails to build on
+              # both architectures (aws-lc-sys packaging), so CI runs the
+              # upstream action instead. See AGENTS.md.
+              pkgs.pinact
+            ];
           };
 
           devShells.default = config.devShells.base;

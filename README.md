@@ -75,3 +75,56 @@ leaves that file alone and the shell follows it as-is.
   The imported version provides `devShells.zig` (zig, matching zls, ziglint, zigdoc).
 - `nix` — Nix linting and formatting (nixfmt, statix, deadnix)
 - `queryPath` — Query Path team module
+
+## GitHub Actions
+
+The repository ships a composite action at `.github/actions/setup-nix`. It
+installs Nix and restores the devShell closure from the Actions cache. On Depot
+runners the Actions cache is Depot Cache.
+
+```yaml
+jobs:
+  test:
+    runs-on: depot-ubuntu-24.04
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@<sha> # v7.0.1
+        with:
+          persist-credentials: false
+
+      - uses: planetscale/nix-devshell/.github/actions/setup-nix@<sha> # v0.1.0
+
+      - run: nix develop .#dev --command just test
+```
+
+Pin the action by SHA and keep the version in a comment. Renovate and pinact
+update both. A job that uses the action needs no other Nix setup.
+
+### Inputs
+
+| Input | Default | Description |
+| --- | --- | --- |
+| `installer` | `determinate` | `determinate` installs Determinate Nix. `upstream` installs plain Nix. |
+| `cache` | `true` | Restore and save the Nix store through the Actions cache. |
+| `primary-key` | derived | Cache key. The default uses the installer, the runner OS and architecture, and the digest of `flake.lock`. |
+| `github-token` | workflow token | Token for `github:` flake inputs. Pass a bot token when the flake reads private sibling repositories, because the workflow token cannot. |
+| `git-auth-token` | empty | Token for a global git `insteadOf` rewrite. This covers `git+https` flake inputs from private repositories. |
+
+### Outputs
+
+| Output | Description |
+| --- | --- |
+| `cache-hit` | `true` when the Nix store came from a cache entry, including a partial match. |
+| `cache-key` | Cache key the store was saved under. |
+
+### Cache behaviour
+
+The key contains the `flake.lock` digest. When the lock file changes, the action
+restores the previous store through the key prefix and downloads only the paths
+that changed. The job then saves a new entry under the new key.
+
+Measured on Depot runners, restoring one project devShell closure (3.3 GiB over
+149 paths) takes 4 to 9 seconds. A cold download from cache.nixos.org takes 24 to
+31 seconds. `DeterminateSystems/magic-nix-cache-action` gives no speedup on
+Depot runners: the store uploads fail or never happen, so every job stays cold.

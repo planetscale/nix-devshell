@@ -6,6 +6,7 @@ This repo (`planetscale/nix-devshell`) exports shared flake-parts modules consum
 
 ```
 flake.nix                        # exports flakeModules, owns the dev shell for this repo
+.github/actions/setup-nix/       # composite action consumers use in CI: install Nix + Actions cache
 modules/
   base.nix                       # company-wide tools, sets systems via lib.mkDefault
   go.nix                         # Go toolchain, parameterized by version (mattware + version args)
@@ -106,10 +107,35 @@ A module that only uses nixpkgs (no nix-devshell inputs needed) skips the first 
 - **`x86_64-darwin` is not supported** — base sets `lib.mkDefault` to the three supported systems; consumers can restrict further for Linux-only projects
 - **`inputsFrom` does not propagate env vars or shellHook** — consumers needing shared config across multiple shells must use a `let mkDevShell = ...` pattern
 
+## The setup-nix Action
+
+`.github/actions/setup-nix` installs Nix and restores the Nix store through
+`nix-community/cache-nix-action`. Consumers pin it by SHA:
+
+```yaml
+- uses: planetscale/nix-devshell/.github/actions/setup-nix@<sha> # vX.Y.Z
+```
+
+Constraints that must not regress:
+
+- `magic-nix-cache-action` does not work on Depot runners. The store uploads
+  return 405 against the Actions cache API, and with Determinate Nix it
+  subscribes to build events and caches nothing for substitution-only work.
+  Every job stayed cold with it installed. Do not add it back.
+- Every `run:` step in the composite takes its inputs through `env:`, never
+  through `${{ }}` interpolation, so zizmor's template-injection audit stays
+  quiet.
+- All `uses:` in `.github/` stay SHA-pinned with a version comment.
+  `.github/workflows/ci.yml` enforces this with `pinact run --check --verify`.
+- `pinact` comes from `devShells.dev`. `zizmor` does not: nixpkgs 1.32.0 fails
+  to build on both architectures (aws-lc-sys packaging), so CI runs
+  `zizmorcore/zizmor-action` instead. Move zizmor into `devShells.dev` once
+  nixpkgs fixes the package.
+
 ## Dev Shell for This Repo
 
 ```bash
 nix develop          # enters the base shell (default = devShells.base)
-nix develop .#dev    # treefmt wrapper (nixfmt, statix, deadnix)
+nix develop .#dev    # treefmt wrapper (nixfmt, statix, deadnix) plus pinact and zizmor
 nix flake check      # runs treefmt check + validates all devShells
 ```
