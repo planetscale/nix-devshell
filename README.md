@@ -93,13 +93,17 @@ jobs:
         with:
           persist-credentials: false
 
-      - uses: planetscale/nix-devshell/.github/actions/setup-nix@<sha> # v0.1.0
+      - uses: planetscale/nix-devshell/.github/actions/setup-nix@<sha> # v0.1.1
 
       - run: nix develop .#dev --command just test
 ```
 
-Pin the action by SHA and keep the version in a comment. Renovate and pinact
-update both. A job that uses the action needs no other Nix setup.
+Pin the action by SHA and keep the version in a comment; pinact verifies that
+the two agree. A job that uses the action needs no other Nix setup.
+
+Tags are cut automatically, as `v0.1.<n>`, when a commit changes
+`.github/actions/`. Commits elsewhere in the repository get no tag, because
+consumers only ever reference the action.
 
 ### Inputs
 
