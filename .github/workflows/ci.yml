@@ -32,6 +32,11 @@ jobs:
       - name: Check the devshell evaluates
         run: nix develop .#dev --command nix --version
 
+      # Guards the restore, which extracts as root and would otherwise leave
+      # ~/.cache unwritable for tools that create a cache there.
+      - name: Check the user cache is writable
+        run: mkdir -p "$HOME/.cache/setup-nix-smoke" && rmdir "$HOME/.cache/setup-nix-smoke"
+
       - name: Report cache
         env:
           CACHE_HIT: ${{ steps.nix.outputs.cache-hit }}

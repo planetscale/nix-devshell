@@ -85,3 +85,17 @@ runs:
         paths: |
           ~/.cache/nix
           /nix
+
+    # The restore runs as root (it has to, for /nix) and extracts absolute
+    # paths, so ~/.cache is created owned by root. cache-nix-action fixes the
+    # permissions of ~/.cache/nix itself, not of its parent, and anything that
+    # creates a directory under ~/.cache then fails with AccessDenied. Zig is
+    # the one that bit us, with ~/.cache/zig.
+    - name: Fix ownership of the cache directory
+      if: ${{ inputs.cache == 'true' }}
+      shell: bash
+      run: |
+        set -euo pipefail
+        if [ -d "$HOME/.cache" ] && [ ! -w "$HOME/.cache" ]; then
+          sudo chown "$(id -u):$(id -g)" "$HOME/.cache"
+        fi
