@@ -70,7 +70,15 @@
 
           devShells.dev = pkgs.mkShell {
             inputsFrom = [ config.devShells.nix ];
-            packages = [ config.treefmt.build.wrapper ];
+            packages = [
+              config.treefmt.build.wrapper
+              # GitHub Actions auditing for this repo's .github/. Consumers do
+              # not need these, so they stay out of the shared modules. zizmor
+              # builds because the nixpkgs input is pinned to the last
+              # revision before 1.32.0.
+              pkgs.pinact
+              pkgs.zizmor
+            ];
           };
 
           devShells.default = config.devShells.base;

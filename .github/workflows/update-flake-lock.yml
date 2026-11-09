@@ -18,8 +18,11 @@ jobs:
       - name: Install Nix
         uses: DeterminateSystems/determinate-nix-action@bafaa638b9d5ec0e7e3ac1a7fc80453ef1fd265f # v3.20.0
 
+      # nixpkgs stays put: the locked revision is the last one whose zizmor
+      # builds on both architectures. Update it by hand, with `nix flake lock
+      # --update-input nixpkgs`, after checking that. See AGENTS.md.
       - name: Update flake.lock
-        run: nix flake update
+        run: nix flake update flake-parts mattware treefmt-nix
 
       - name: Validate flake
         run: nix flake check

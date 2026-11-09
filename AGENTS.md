@@ -6,6 +6,7 @@ This repo (`planetscale/nix-devshell`) exports shared flake-parts modules consum
 
 ```
 flake.nix                        # exports flakeModules, owns the dev shell for this repo
+.github/actions/setup-nix/       # composite action consumers use in CI: install Nix + Actions cache
 modules/
   base.nix                       # company-wide tools, sets systems via lib.mkDefault
   go.nix                         # Go toolchain, parameterized by version (mattware + version args)
@@ -106,10 +107,43 @@ A module that only uses nixpkgs (no nix-devshell inputs needed) skips the first 
 - **`x86_64-darwin` is not supported** — base sets `lib.mkDefault` to the three supported systems; consumers can restrict further for Linux-only projects
 - **`inputsFrom` does not propagate env vars or shellHook** — consumers needing shared config across multiple shells must use a `let mkDevShell = ...` pattern
 
+## The setup-nix Action
+
+`.github/actions/setup-nix` installs Nix and restores the Nix store through
+`nix-community/cache-nix-action`. Consumers pin it by SHA:
+
+```yaml
+- uses: planetscale/nix-devshell/.github/actions/setup-nix@<sha> # vX.Y.Z
+```
+
+Constraints that must not regress:
+
+- `magic-nix-cache-action` is no faster than no cache on Depot runners. Measured
+  with all three installers, a warm `nix develop` took 29 to 32 seconds, the
+  same as a cold one. With plain Nix every store upload fails with
+  `405 Method Not Allowed`, once per path. With Determinate Nix the action
+  reports `Subscribing to Determinate Nixd build events` and logs no uploads at
+  all. `cache-nix-action` restores in 4 to 9 seconds and leaves `nix develop`
+  at under a second, so use that instead.
+
+  Untested: whether `permissions: actions: write` changes the 405, and why
+  Determinate Nix logs no uploads. Do not restate either as fact.
+- Every `run:` step in the composite takes its inputs through `env:`, never
+  through `${{ }}` interpolation, so zizmor's template-injection audit stays
+  quiet.
+- All `uses:` in `.github/` stay SHA-pinned with a version comment.
+  `.github/workflows/ci.yml` enforces this with `pinact run --check --verify`.
+- `pinact` and `zizmor` come from `devShells.dev`. zizmor only builds because
+  the `nixpkgs` input is pinned to a revision: 1.32.0 fails to build on both
+  architectures (aws-lc-sys wants a system AWS-LC that nixpkgs does not
+  provide). The pin is a full revision, not `nixos-unstable`, so `nix flake
+  update` leaves it alone. Move the pin forward only after checking that
+  zizmor builds and is in cache.nixos.org for both architectures.
+
 ## Dev Shell for This Repo
 
 ```bash
 nix develop          # enters the base shell (default = devShells.base)
-nix develop .#dev    # treefmt wrapper (nixfmt, statix, deadnix)
+nix develop .#dev    # treefmt wrapper (nixfmt, statix, deadnix) plus pinact and zizmor
 nix flake check      # runs treefmt check + validates all devShells
 ```

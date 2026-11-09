@@ -1,0 +1,67 @@
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+
+permissions: {}
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  setup-nix:
+    name: setup-nix
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    permissions:
+      contents: read
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Setup Nix
+        id: nix
+        uses: $/.github/actions/setup-nix
+
+      - name: Check the devshell evaluates
+        run: nix develop .#dev --command nix --version
+
+      - name: Report cache
+        env:
+          CACHE_HIT: ${{ steps.nix.outputs.cache-hit }}
+          CACHE_KEY: ${{ steps.nix.outputs.cache-key }}
+        run: echo "cache-hit=$CACHE_HIT key=$CACHE_KEY"
+
+  actions-lint:
+    name: zizmor and pinact
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    permissions:
+      contents: read
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Setup Nix
+        uses: $/.github/actions/setup-nix
+
+      - name: zizmor
+        run: nix develop .#dev --command zizmor --format=plain --min-confidence=medium .
+
+      # --verify resolves every SHA back to its tag, and --min-age holds back
+      # releases younger than three days. Both read the GitHub API, so pass a
+      # token to stay clear of the anonymous rate limit.
+      - name: pinact
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        run: |
+          mapfile -t files < <(find .github -name '*.yml' -o -name '*.yaml')
+          nix develop .#dev --command pinact run --check --verify --min-age 3 "${files[@]}"
