@@ -15,7 +15,7 @@ modules/
                                  # go.mod instead; exported as flakeModules.go.fromGoMod
                                  # nix-devshell.go.package defaults to the selected go-bin
   zig.nix                        # Zig toolchain, parameterized by version (mattware + version args)
-                                 # exported as a version namespace: flakeModules.zig."0.16"
+                                 # exported as a version namespace: flakeModules.zig."0.17"
   teams/
     query-path.nix               # queryPath team module (imports base + adds just)
 ```
@@ -43,12 +43,14 @@ go = {
   "1.27" = go "1.27";
   fromGoMod = importApply ./modules/go.nix (withMattware // { version = null; });
 };
-zig = {
-  "0.15" = zig "0.15";
-  "0.16" = zig "0.16";
-};
+zig = builtins.listToAttrs (
+  map (version: {
+    name = version;
+    value = zig version;
+  }) zigVersions
+);
 ```
-Consumers import `go."1.27"` / `zig."0.16"` (exactly one — two versions conflict on the `devShells.<name>` attrpath). The zig module maps the version onto nixpkgs attrs (`zig_0_16`, `zls_0_16`); the go module maps it onto mattware attrs (`go-bin_1_27`) and defaults `nix-devshell.go.package` to it. Add a version by adding an entry to the namespace in `flake.nix`.
+Consumers import `go."1.27"` / `zig."0.17"` (exactly one — two versions conflict on the `devShells.<name>` attrpath). The zig keys are generated (`0.10` through `0.99`, `1.0` through `1.19`) rather than listed by hand, so a new Zig minor needs no change here: `zig."0.18"` evaluates as soon as the nixpkgs pin carries `zig_0_18`, and on an older pin the module fails and names the missing attribute. The zig module maps the version onto nixpkgs attrs (`zig_0_17`, and `zls_0_17` when that attribute exists); the go module maps it onto mattware attrs (`go-bin_1_27`) and defaults `nix-devshell.go.package` to it.
 
 The go namespace also has `fromGoMod`, which is not a version: it passes `version = null`, and the module calls mattware's `go-bin.fromGoMod` on the consumer's `go.mod` (`self.outPath + "/go.mod"`, overridable with `nix-devshell.go.goMod`). `go.fromGoMod` conflicts with a version entry on `devShells.go`, so importing both fails loudly. The pinned overlay only tracks the last four minor versions, so a `go.mod` naming anything older fails evaluation and names the version.
 
@@ -97,7 +99,7 @@ A module that only uses nixpkgs (no nix-devshell inputs needed) skips the first 
 ## Package Sources
 
 - **Go packages** (`go-bin_1_27`, `go-bin_1_24`, etc.) — come from `mattware` (`github:mattrobenolt/nixpkgs`), not upstream nixpkgs. Mattware keeps these more up to date. The `go` namespace maps version strings to these attrs.
-- **Zig** (`zig_0_15`/`zls_0_15`, `zig_0_16`/`zls_0_16`) — come from upstream nixpkgs; the zig module pairs each version with its matching zls. Add a version by adding an entry to the `zig` namespace in `flake.nix`.
+- **Zig** (`zig_0_17`/`zls_0_17`) — come from upstream nixpkgs; the zig module uses the matching `zls_<v>` when that attribute exists and omits the language server when it does not (zls trails Zig). Any `0.<minor>` string up to the pin's newest is available without a repo change.
 - **Zig tools** (`ziglint`, `zigdoc`) — come from `mattware`
 
 ## Key Rules

@@ -31,7 +31,7 @@ leaves that file alone and the shell follows it as-is.
       imports = with inputs.planetscale.flakeModules; [
         base
         go."1.27"
-        zig."0.16"
+        zig."0.17"
       ];
 
       perSystem =
@@ -70,9 +70,12 @@ leaves that file alone and the shell follows it as-is.
   and names it: update the `planetscale` input, or set `nix-devshell.go.package` yourself.
 - `zig` — Zig toolchain, a version namespace. Import the version you want (exactly one):
   ```nix
-  imports = [ inputs.planetscale.flakeModules.zig."0.16" ];
+  imports = [ inputs.planetscale.flakeModules.zig."0.17" ];
   ```
-  The imported version provides `devShells.zig` (zig, matching zls, ziglint, zigdoc).
+  The imported version provides `devShells.zig` (zig, ziglint, zigdoc, and zls when
+  nixpkgs has a matching one). A new Zig minor works without a repo change:
+  `zig."0.18"` evaluates once the nixpkgs pin carries `zig_0_18`. On an older pin,
+  evaluation fails and names the missing attribute.
 - `nix` — Nix linting and formatting (nixfmt, statix, deadnix)
 - `queryPath` — Query Path team module
 
