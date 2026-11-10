@@ -1,0 +1,50 @@
+name: Tag the action
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - .github/actions/**
+
+permissions: {}
+
+jobs:
+  tag:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: write
+    steps:
+      # A tag is only useful to consumers, who pin the action by SHA with the
+      # version in a comment. Nothing else needs one, so this runs only when
+      # the action itself changes.
+      - name: Tag the next patch version
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+          SHA: ${{ github.sha }}
+        run: |
+          set -euo pipefail
+
+          # A push that rewrites or re-runs the same commit must not stack
+          # tags on it.
+          if gh api "repos/$REPO/git/matching-refs/tags/v0.1." \
+            --jq '.[].object.sha' | grep -qx "$SHA"; then
+            echo "$SHA is already tagged, nothing to do"
+            exit 0
+          fi
+
+          latest=$(gh api "repos/$REPO/git/matching-refs/tags/v0.1." \
+            --jq '.[].ref | ltrimstr("refs/tags/")' | sort -V | tail -1)
+          if [[ -z "$latest" ]]; then
+            next=v0.1.0
+          else
+            IFS=. read -r major minor patch <<< "${latest#v}"
+            next="v${major}.${minor}.$((patch + 1))"
+          fi
+
+          echo "Tagging $next at $SHA"
+          gh api --method POST "repos/$REPO/git/refs" \
+            --field ref="refs/tags/$next" \
+            --field sha="$SHA"
